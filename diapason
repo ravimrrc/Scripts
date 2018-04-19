@@ -1,0 +1,72 @@
+#!/bin/bash
+# Created by marilen.corciovei@mcc-soft.com for Diapason
+# startup script for diapason, containts jboss only for now
+# for rh based systems:
+# chkconfig: - 90 10
+# description: startup of jboss for diapason
+# for LSB compliance http://wiki.debian.org/LSBInitScripts
+### BEGIN INIT INFO
+# Provides:          diapason
+# Required-Start:    $network $remote_fs $syslog
+# Required-Stop:     $network $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start daemon at boot time
+# Description:       Enable service provided by daemon.
+### END INIT INFO
+
+# to install in a debian based system copy to /etc/init.d and run
+# update-rc.d diapason defaults
+# to remove:
+# update-rc.d -f diapason remove
+
+# to install in a redhad based system copy to /etc/init.d and check chkconfig options
+# chkconfig --add diapason
+# chkconfig --del diapason
+
+
+#change diapason user
+DIAPASON_USER=diapason
+#change path to tomcat (must bellong to $DIAPASON_USER)
+TOMCAT_HOME=/opt/webroot/diapason/apache-tomcat-7.0.64
+
+start(){
+	echo "Starting tomcat..."
+	cd $TOMCAT_HOME/bin
+	./startup.sh > /dev/null 2> /dev/null &
+	/opt/webroot/jetty4drm/bin/jetty4diapason.sh start
+}
+
+stop(){
+	echo "Stopping tomcat..."
+	cd $TOMCAT_HOME/bin
+	$TOMCAT_HOME/bin/shutdown.sh -S &
+	/opt/webroot/jetty4drm/bin/jetty4diapason.sh stop
+	sleep 30s
+        killall -9 java
+}
+
+restart(){
+	stop
+	sleep 60s
+	su -l $DIAPASON_USER -c 'killall java'
+	sleep 30s
+	su -l $DIAPASON_USER -c 'killall -9 java'
+	start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
