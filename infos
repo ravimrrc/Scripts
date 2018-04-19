@@ -1,0 +1,31 @@
+DEB=`tput smso`
+FIN=`tput rmso`
+
+clear
+user=tomcat
+echo "$DEB"
+echo "Running Tomcat processes:"
+echo "$FIN"
+echo "=============================================================================================================="
+
+ps -ef|grep [w]ebroot|grep -v grep|awk '{printf "%7s %5d %9s  %15s  %20s  %20s\n" ,$1,$2,$3,$(NF-2),$(NF-1),$(NF)}'
+
+echo "=============================================================================================================="
+echo "$DEB"
+/opt/webroot/diapason/apache-tomcat-7.0.64/bin/version.sh | grep "Apache Tomcat"
+echo "$FIN"
+echo "  "
+echo "$DEB Diapason webroot $FIN"
+echo " -->  /opt/webroot/diapason/apache-tomcat-7.0.64/diapason "
+echo " "
+echo "$DEB  Tomcat log:  $FIN"
+echo " -->  /opt/log/diapason/logs "
+#echo "  "
+#echo "$DEB"
+#echo "Issue the command 'pilotage' to check FS, processes and URLs"
+#echo "$FIN"
+echo "  "
+echo "$DEB To stop/start diapason, use /opt/webroot/diapason/apache-tomcat-7.0.64/bin/catalina.sh (stop | start)  $FIN"
+echo " "
+echo "$DEB To stop/start jetty, use /opt/webroot/jetty4drm/bin/jetty4diapason.sh (stop | start)  $FIN"
+echo " "
