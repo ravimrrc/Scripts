@@ -1,0 +1,150 @@
+#!/bin/ksh
+# program : /usr/local/exploit/pilotage
+# Reads ITM6 configuration files and checks if processes are presents
+# and if filesystems space usage is greater than max thresold.
+# Use it at your own risk. There is absolutly no warranty !
+
+# Configuration files to be filled by system or application administrator
+ITM_PROCESS_FILE=/opt/IBM/ITM/smitools/config/K08_process.param
+ITM_FILESYSTEM_FILE=/opt/IBM/ITM/smitools/config/K08_filesystem.param
+URL_File="/opt/IBM/ITM/smitools/config/K08_URLMonitor.param"
+NB_CRITICAL=0
+#CmdPath="/opt/IBM/ITM/CONFILES"
+clear
+# colors
+RED="echo -e \\033[5;31m\c"
+BLUE="echo -e \\033[1;34m\c"
+NORMAL="echo -e \\033[0;39m\c"
+DARK="echo -e \\033[1;39m\c"
+
+# Do both configuration files exists and are not empty ?
+if [  -s $ITM_PROCESS_FILE ] && [ -s $ITM_FILESYSTEM_FILE ];then
+        PRESENCE=OK
+else
+        echo "One or both configuration files are missing :
+        $ITM_PROCESS_FILE
+        $ITM_FILESYSTEM_FILE"
+        exit 1
+fi
+
+# Is wget installed here ?
+type wget >/dev/null 2>&1
+if [[ "$?" != "0" ]]; then
+         echo "The command wget is not installed on the system !"
+         exit 1
+fi
+
+# processes
+${DARK} ; echo -e "\nPROCESS :\n=========" ; ${NORMAL}
+
+cat $ITM_PROCESS_FILE | egrep -v "^#|^$" | while read LINE
+do
+        MONITORING_SOLUTION=$( echo $LINE | awk -F ";" '{ print $1 }' )
+        LABEL=$( echo $LINE | awk -F ";" '{ print $2 }' )
+        PATTERN=$( echo $LINE | awk -F ";" '{ print $3 }' )
+        USER=$( echo $LINE | awk -F ";" '{ print $4 }' )
+        MIN_PROCESS=$( echo $LINE | awk -F ";" '{ print $5 }' )
+        PROCESS_DETECTED_COUNT=$(/bin/ps -ef | grep "$PATTERN" | grep -v grep | wc -l | awk '{ print $1 }')
+        # if number of processes detected is greater or equal to minimun allowed by ITM
+        if [ "$PROCESS_DETECTED_COUNT" -ge "$MIN_PROCESS" ] ; then
+                printf "%55s%20s" "`${NORMAL}`${LABEL}" "`${BLUE}` -> OK (${PROCESS_DETECTED_COUNT} process(es) found !)`${NORMAL}`"
+                print
+        else
+                printf "%55s%20s" "`${NORMAL}`${LABEL}" "`${RED}` -> !!!!!  KO  !!!!!(${PROCESS_DETECTED_COUNT} process(es) found !)
+`${NORMAL}`"
+                print
+        fi
+
+done
+
+# filesystems
+${DARK} ; echo -e "\nFILES SYSTEMS :\n===============" ; ${NORMAL}
+
+cat $ITM_FILESYSTEM_FILE | egrep -v "^#|^$" | while read LINE
+do
+        MONITORING_SOLUTION=$( echo $LINE | awk -F ";" '{ print $2 }' )
+        LABEL=$( echo $LINE | awk -F ";" '{ print $3 }' )
+        MOUNTPOINT=$( echo $LINE | awk -F ";" '{ print $4 }' | sed 's/%//' )
+        L_THRESHOLD=$( echo $LINE | awk -F ";" '{ print $5 }' )
+        M_THRESHOLD=$( echo $LINE | awk -F ";" '{ print $6 }' )
+        H_THRESHOLD=$( echo $LINE | awk -F ";" '{ print $7 }' )
+        CURRENT_USED_SPACE=$(df -P $MOUNTPOINT |grep -v Mounted|awk '{print $5}' | sed 's/%//')
+       #if used percentage is greater or equal to ITM Medium threshold
+        if [[ $CURRENT_USED_SPACE -ge $M_THRESHOLD ]]; then
+         printf "%55s%20s" "`${NORMAL}`${MOUNTPOINT}" "`${RED}` -> WARNING ALERT !!!(${CURRENT_USED_SPACE}% > ${M_THRESHOLD}%)`${NOR
+MAL}`"
+                print
+                NB_CRITICAL=`expr ${NB_CRITICAL} + 1`
+
+	 # if used percentage is greater or equal to ITM high threshold
+       else if [[ $CURRENT_USED_SPACE -ge $H_THRESHOLD ]]; then
+                printf "%55s%20s" "`${NORMAL}`${MOUNTPOINT}" "`${RED}` -> CRITICAL ALERT !!!(${CURRENT_USED_SPACE}% > ${H_THRESHOLD}
+%)`${NORMAL}`"
+                print
+                NB_CRITICAL=`expr ${NB_CRITICAL} + 1`
+        fi
+	fi
+done
+
+if [[ "${NB_CRITICAL}" = "0" ]];then
+                  printf "%55s%20s" "`${NORMAL}`" "`${BLUE}` -> OK (No problem found)`${NORMAL}`"
+                  print
+fi
+$NORMAL
+
+CHECK_WGET ()
+{
+   type wget >/dev/null 2>&1
+   if [[ "$?" != "0" ]]
+      then
+         echo "The command wget is not installed on the system !"
+         exit 1
+   fi
+}
+
+URL_LINUX ()
+{
+${DARK}
+echo "URL :"
+echo "====="
+${NORMAL}
+
+grep ^was ${URL_File} | while read LINE
+   do
+      MONITORING_SOLUTION=`echo ${LINE} | awk -F ";" '{print $1}'`
+      URL=`echo ${LINE} | awk -F ";" '{print $2}'`
+      ACCOUNT=`echo ${LINE} | awk -F ";" '{print $3}'`
+      SERVER=`echo ${LINE} | awk -F ";" '{print $4}'`
+      SEV=`echo ${LINE} | awk -F ";" '{print $5}'`
+      TIMEOUT=`echo ${LINE} | awk -F ";" '{print $6}'`
+      PATTERN=`echo ${LINE} | awk -F ";" '{print $7}'`
+      /usr/bin/wget -q --tries=1 --timeout=${TIMEOUT} --no-check-certificate --no-proxy --cache=off -O - "${URL}" |\
+      awk '$0 ~ /'"$PATTERN"/' { Found="y";exit 0} END {if ( Found == "y" ) {exit 0} else {exit 1}}'
+         if [[ $? = 0 ]]
+            then
+               printf "%78s%20s" "`${NORMAL}`$URL" "`${BLUE}` -> OK`${NORMAL}`"
+               print
+            else
+               printf "%78s%20s" "`${NORMAL}`$URL" "`${RED}` -> !!!!!  KO  !!!!!`${NORMAL}`"
+               print
+         fi
+   done
+	echo ""
+}
+
+CHECK_DB ()
+{
+${DARK}
+echo ""
+#echo "Checking MySQL"
+echo -e "\nChecking MySQL Connection :\n=========================" ; ${NORMAL}
+echo "On Host LEDCB747 and Port 3306 :"
+${NORMAL}
+echo exit | telnet 10.254.33.152 3306
+}
+
+CHECK_WGET
+URL_LINUX
+CHECK_DB
+echo ""
+

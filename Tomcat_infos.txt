@@ -1,0 +1,22 @@
+#!/bin/ksh
+DEB=`tput smso`
+FIN=`tput rmso`
+TODAY=$(date +%b" "%d)
+BLUE="echo \\033[1;34m\c"
+NORMAL="echo \\033[0;39m\c"
+clear
+echo "===================================================================================="
+ps -ef   | grep [j]ava|egrep -v "SCM|grep"| awk '{printf "%10s %9d %9d %10s   %20s %30s\n" ,$1,$2,$3,$7,$8,$9}'
+echo "===================================================================================="
+echo "  "
+echo "  "
+echo "$DEB sudo service alfdandoc stop/start $FIN"
+echo " -->/var/log/alfresco/tomcat/catalina.out "
+echo " -->/var/log/alfresco/alfresco.log "
+echo "  "
+echo "  "
+echo "$DEB sudo service solrdandoc stop/start $FIN"
+echo " -->/var/log/solr/tomcat/catalina.out "
+echo " -->/var/log/solr/solr.log "
+echo "  "
+

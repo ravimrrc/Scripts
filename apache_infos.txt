@@ -1,0 +1,40 @@
+DEB=`tput smso`
+FIN=`tput rmso`
+
+TODAY=$(date +%b" "%d)
+#BLUE="echo \\033[1;34m\c"
+#NORMAL="echo \\033[0;39m\c"
+
+clear
+user=alfresco
+echo "$DEB"
+echo "Running Tomcat processes:"
+echo "$FIN"
+echo "============================================================================================================================"
+#ps -ef   | grep [j]ava|egrep -v "SCM|grep"| awk '{printf "%10s %9d %9d %10s   %20s %30s\n" ,$1,$2,$3,$7,$8,$9}'
+ps -ef|grep  $user |grep [B]ootstrap|grep -v grep|awk '{printf "%7s %5d %9s  %15s  %20s  %20s\n" ,$1,$2,$3,$(NF-2),$(NF-1),$(NF)}'
+echo "============================================================================================================================"
+
+echo "$DEB Apache version $FIN"
+/usr/sbin/httpd -v
+echo " "
+echo "$DEB Tomcat version $FIN"
+/opt/alfresco/tomcat/bin/version.sh | grep "Apache Tomcat"
+echo "  "
+echo "$DEB Tomcat/Alfresco/Solr logs:  $FIN 
+
+/opt/alfresco/tomcat/logs/catalina.out
+/opt/alfresco/tomcat/logs/localhost_access_log.$(date +%Y-%m-%d).txt
+/opt/solr-tomcat/logs/catalina.out
+/opt/solr-tomcat/logs/localhost_access_log.$(date +%Y-%m-%d).txt
+
+/opt/logs/alfresco/alfresco.log
+/opt/logs/alfresco/share.log
+
+/opt/logs/solr/solr.log
+/var/log/httpd/alfresco-access-ssl.log"
+
+echo "  "
+echo "$DEB Use alfresco user to stop/start Alfreso Tomcat  $FIN"
+echo " "
+
